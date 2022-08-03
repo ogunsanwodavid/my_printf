@@ -9,7 +9,7 @@
 
 void my_printf(const char *, ...);
 void my_vprintf(const char *, va_list);
-void format_specifier(const char *, va_list);
+int format_specifier(const char *, va_list, int, int *);
 void print_string(char *);
 void unsignedNumberToString(uint64_t, int, char *);
 void numberToString(int64_t, int, char *);
@@ -19,12 +19,13 @@ int main(void)
 {
 	uint64_t n = (uint64_t) - 1;
 	char *ptr = "hello";
+	void (*ptr_func)(char *) = print_string;
 
 	my_printf("Characters: %c %c done.\n", 'a', 65);
 	my_printf("Decimals: %d %ld done\n", 1977, 650000L);
 	my_printf("Some different radicals: %d %x %X done.\n", 100, 100, 100);
 	my_printf("%s \n", "Alx is Amaizing");
-	my_printf("testing with pointer: %p, %ld %lx\n", ptr, n, n);
+	my_printf("testing with pointer: %p, %p, %ld, %lx\n",ptr_func, ptr, n, n);
 	my_printf("testing other possible integer: %d %d\n", INT_MAX, INT_MIN);
 
 	return (0);
@@ -41,7 +42,8 @@ void my_printf(const char *format, ...)
 
 void my_vprintf(const char *format, va_list args)
 {
-	int state = 0;
+	int state = 0, reset_flag, reset = 1, is_long = 0;
+	int *ptr = &is_long;
 	
 	while (*format)
 	{
@@ -54,15 +56,22 @@ void my_vprintf(const char *format, va_list args)
 		}
 		else
 		{
-			format_specifier(format, args);
-			state = 0;
+			reset_flag = format_specifier(format, args, reset, ptr);
+
+			if (reset_flag == 1)
+			{
+				state = 0;
+				is_long = 0;
+			}
+			else
+				reset_flag = 1;
 		}
 		
 		format++;
 	}
 }
 
-void format_specifier(const char *format, va_list args)
+int format_specifier(const char *format, va_list args, int reset, int *ptr_is_long)
 {
 	int n;
 	char ch, *s, buffer[65];
@@ -71,7 +80,10 @@ void format_specifier(const char *format, va_list args)
 	{
 		case 'd':
 			{
-				n = va_arg(args, int);
+				if (*ptr_is_long)
+					n = va_arg(args, long);
+				else
+					n = va_arg(args, int);
 				numberToString(n, DECIMAL, buffer);
 				print_string(buffer);
 				break;
@@ -99,13 +111,18 @@ void format_specifier(const char *format, va_list args)
 			}
 		case 'x':
 			{
-				n = va_arg(args, int);
+				if (*ptr_is_long)
+					n = va_arg(args, long);
+				else
+					n = va_arg(args, int);
 				unsignedNumberToString(n, HEX, buffer);
 				print_string(buffer);
 				break;
 			}
 		case 'l':
 			{
+				*ptr_is_long = 1;
+				reset = 0;
 				break;
 			}
 		case '%':
@@ -114,6 +131,7 @@ void format_specifier(const char *format, va_list args)
 				break;
 			}
 	}
+	return (reset);
 }
 
 void print_string(char *s)
